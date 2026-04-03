@@ -123,14 +123,11 @@ int main(void)
 	int result = 0;		//人数结果
 	uint16_t history_count =  0;		//本地数组索引
   int history_faces[256] = {0};		//本地储存人数信息数组(重复定时)	// history_faces[255](单次定时)
-
-	uint32_t capture_interval = 0;//初始时间间隔单位是s 
 	char message[20]; 							//用于存储字符和数字
 	uint32_t last_capture_tick = 0; //用于记录定时器打卡
-	extern volatile uint8_t Work_Flag;	//1为待机模式
-	extern volatile uint8_t Direct_Flag;	//1为直接拍照
-	extern volatile uint8_t Single_Flag;	//1为单次拍照
-	HAL_UART_Receive_IT(&huart2, &usart2_rx_byte, 1);		//接收初始化
+	
+	ConfigResult_t current_config = {MODE_IDLE,0,0};	//结构体初始化
+	HAL_UART_Receive_IT(&huart2, &usart2_rx_byte, 1);	//接收初始化
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -139,56 +136,50 @@ int main(void)
   {		
     /* USER CODE END WHILE */
     /* USER CODE BEGIN 3 */
-		if(Direct_Flag)	
+		/*空闲模式*/
+		if(current_config.mode == MODE_IDLE)
 		{
-					/*拍照初始化和拍摄*/
+			current_config = Enter_Wait_Config_Mode(history_faces, &history_count);
+			last_capture_tick = HAL_GetTick();	//重置计时器
+		}
+		else if(current_config.mode == MODE_DIRECT)
+		{
+			/*拍照初始化和拍摄*/
 			demo_run();
 			/*单次的人数结果*/
 			result = MX_X_CUBE_AI_Process();
 			printf("order0people%dend",result);
-			Direct_Flag = 0;
-			Work_Flag = 1;
+			current_config.mode = MODE_IDLE;	//恢复空闲模式
 		}
-		// 假设这里触发了按键，或者开机第一次需要配置
-		if (Work_Flag == 1)
+		else if(current_config.mode == MODE_CONTINUOUS || current_config.mode == MODE_SINGLE)
 		{
-				// 调用函数：传入数组名，传入数量的地址 (&)，并用变量接收返回值
-				capture_interval = Enter_Wait_Config_Mode(history_faces, &history_count);
-				Work_Flag= 0; // 退出配置模式
-			  last_capture_tick = HAL_GetTick();
-		}
-		if (HAL_GetTick() - last_capture_tick >= (capture_interval * 1000) && (capture_interval != 0) ) 
-    {
-		/*拍照初始化和拍摄*/
-	  demo_run();
-		/*单次的人数结果*/
-		result = MX_X_CUBE_AI_Process();
-		/*人数储存到本地*/
-#define  LOCAL		1		
-#if (LOCAL)
-		if(Work_Flag == 0 && Single_Flag == 0)//重复触发
-		{
-			if (history_count < 256) 
+			if (HAL_GetTick() - last_capture_tick >= (current_config.interval * 1000)) 
 			{
-				// 把当前的人数 (result)，存进第 history_count 个抽屉
-				history_faces[history_count] = result;
-				//存完之后，把引索加 1，告诉下一次拍照存到下一个抽屉去
-				history_count++; 
+				/*拍照初始化和拍摄*/
+				demo_run();
+				/*单次的人数结果*/
+				result = MX_X_CUBE_AI_Process();
+				/*存本地操作*/
+				if (current_config.mode == MODE_CONTINUOUS)
+				{
+					if (history_count < 255) 
+					{
+						history_faces[history_count++] = result;
+					}
+					// 模拟按钮：存够2个回配置模式
+					if (history_count >= 2) {
+							current_config.mode = MODE_IDLE;
+					}
+				}
+				else // 单次模式
+				{
+					history_faces[255] = result;
+					current_config.mode = MODE_IDLE; // 执行完一次就回去
+				}
+				last_capture_tick = HAL_GetTick();	//重新计时
 			}
-			/*调试：模拟触发*/
-			if(history_count == 2)
-			{
-				Work_Flag = 1;//本来这个要用按键触发变为一
-			}
+			
 		}
-		else if(Work_Flag == 0 && Single_Flag == 1)//单次触发
-		{
-			history_faces[255] = result;
-			Work_Flag = 1;//回到配对模式
-		}
-#endif	
-	 }	
-
 		/*单次传输人数信息使用下面代码(注意初始化char message[20])*/
 #define  PEOPLE_NUMBER		0
 #if (PEOPLE_NUMBER)
