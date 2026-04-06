@@ -11,6 +11,8 @@ Objects/
 *.uvguix.*
 *.Bytrain
 *.cheche
+*.uvoptx
+
 
 # 3. 必须要保留的文件（重要！）
 # 你的 .c, .h, .s, .uvprojx, .uvoptx, .sct 都在这里，Git 默认会保留它们

@@ -71,7 +71,14 @@ static void MPU_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+/*定义一个拍照并且处理数据的函数*/
+int Capture_Process_Faces(void)
+{
+	int res = 0;
+	demo_run();
+	res = MX_X_CUBE_AI_Process();
+	return res;
+}
 /* USER CODE END 0 */
 
 /**
@@ -146,27 +153,24 @@ int main(void)
 		else if(current_config.mode == MODE_TPHOTO)
 		{
 			/*拍照初始化和拍摄*/
-			demo_run();
+			result = Capture_Process_Faces();
 			printf("image:");
-			for (uint32_t i = 0; i < 160 * 160; i++) 
+			for (uint32_t i = 0; i < PIXELS; i++) 
 			{
 					uint16_t pixel = image_buffer[i];
 					// 提取高 8 位和低 8 位，以十六进制字符串格式打印
 					printf("%02X%02X", (pixel >> 8) & 0xFF, pixel & 0xFF);
-					delay_ms(1); 
+					delay_ms(2); 
 			}
 			printf("end\r\n");
 			/*单次的人数结果*/
-			result = MX_X_CUBE_AI_Process();
 			printf("order0people%dend",result);
 			current_config.mode = MODE_IDLE;	//恢复空闲模式
 		}
 		else if(current_config.mode == MODE_DIRECT)
 		{
-			/*拍照初始化和拍摄*/
-			demo_run();
 			/*单次的人数结果*/
-			result = MX_X_CUBE_AI_Process();
+			result = Capture_Process_Faces();
 			printf("order0people%dend",result);
 			current_config.mode = MODE_IDLE;	//恢复空闲模式
 		}
@@ -174,10 +178,8 @@ int main(void)
 		{
 			if (HAL_GetTick() - last_capture_tick >= (current_config.interval * 1000)) 
 			{
-				/*拍照初始化和拍摄*/
-				demo_run();
 				/*单次的人数结果*/
-				result = MX_X_CUBE_AI_Process();
+				result = Capture_Process_Faces();
 				/*存本地操作*/
 				if (current_config.mode == MODE_CONTINUOUS)
 				{
@@ -197,7 +199,6 @@ int main(void)
 				}
 				last_capture_tick = HAL_GetTick();	//重新计时
 			}
-			
 		}
 		/*单次传输人数信息使用下面代码(注意初始化char message[20])*/
 #define  PEOPLE_NUMBER		0

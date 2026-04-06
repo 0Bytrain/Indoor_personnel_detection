@@ -23,6 +23,28 @@
 extern uint8_t USART2_RxBuffer[USART2_RX_BUFFER_SIZE];
 extern volatile uint8_t USART2_RxFlag;
 //尝试用结构体返回值来写(主要是状态三用了全局变量)
+
+/**
+ * @brief  [提取的子功能]：处理获取历史数据命令，专心做打印和清零动作
+ */
+static void Process_Get_History(int *history_array, uint16_t *p_count)
+{
+    if (*p_count == 0) // 单次触发结果（或者最开始什么都没有）
+    {
+        printf("order0people%dend\r\n", history_array[255]);
+    }
+    else // 持续触发结果
+    {
+        for (int i = 0; i < *p_count; i++)
+        {
+            printf("order%dpeople%dend\r\n", (i + 1), history_array[i]);
+            delay_ms(100); // 防止发送过快导致 ESP8266 缓冲区溢出
+        }
+        // 清空本地记录：通过指针把外面的 history_count 清零
+        *p_count = 0; 
+    }
+}
+
 /**
  * @brief  等待配置模式
  * @param  history_array : 指向保存识别结果的数组首地址
@@ -43,22 +65,8 @@ ConfigResult_t Enter_Wait_Config_Mode(int *history_array, uint16_t *p_count)
 			// 状态 0：等待上位机发送 "GET_HISTORYend" 
 			if ( strstr((const char*)USART2_RxBuffer, "GET_HISTORYend") != NULL )
 			{
-				if(*p_count == 0)	//单次触发结果（或者最开始什么都没有）
-				{
-					printf("order0people%dend\r\n", history_array[255]);
-				}
-				else	//持续触发结果
-				{
-					for(int i = 0;i < *p_count;i++)
-					{
-							printf("order%dpeople%dend\r\n",(i+1), history_array[i]);//哎，难看的回复
-							delay_ms(100); // 防止发送过快导致 ESP8266 缓冲区溢出
-					}
-					// 清空本地记录：通过指针把外面的 history_count 清零
-					*p_count = 0; 
-				}
+				Process_Get_History(history_array, p_count);
 			}
-			
 			/* 状态 1：等待上位机发送类似 "SET_TIMER_REPEAT:60end" */
 			else if (strstr((char*)USART2_RxBuffer, "SET_TIMER_REPEAT:") != NULL)
 			{		
@@ -73,7 +81,6 @@ ConfigResult_t Enter_Wait_Config_Mode(int *history_array, uint16_t *p_count)
 					}		
 				}
 			}
-			
 			/* 状态 2：等待上位机发送类似 "SET_TIMER_ONCE:60end" */
 			else if(strstr((char*)USART2_RxBuffer, "SET_TIMER_ONCE:") != NULL)
 			{
@@ -96,7 +103,7 @@ ConfigResult_t Enter_Wait_Config_Mode(int *history_array, uint16_t *p_count)
 				  return res;
 			}
 			/* 状态 4：等待上位机发送 "DIRECTKKK" ,直接拍照上传照片数据*/
-			else if(strstr((char*)USART2_RxBuffer, "DIRECTKKK") != NULL)
+			else if(strstr((char*)USART2_RxBuffer, "DIRECTENDKKK") != NULL)
 			{
 				USART2_RxPacket_Clear();				// 退出前清空标志
 				res.mode = MODE_TPHOTO;
