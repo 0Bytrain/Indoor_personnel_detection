@@ -20,10 +20,7 @@
 static uint8_t dump_once = 0;
 extern DCMI_HandleTypeDef hdcmi;
 
-/* ================= ≈‰÷√ ================= */
 
-#define PIXELS     (DEMO_OUTPUT_WIDTH * DEMO_OUTPUT_HEIGHT)
-#define BYTES      (PIXELS * 2U)
 
 /* DMA –¥»Î”√£∫AXI SRAM */
 __attribute__((section(".AxSRAM"), aligned(32)))

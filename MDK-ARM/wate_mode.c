@@ -77,7 +77,7 @@ ConfigResult_t Enter_Wait_Config_Mode(int *history_array, uint16_t *p_count)
 			/* 状态 2：等待上位机发送类似 "SET_TIMER_ONCE:60end" */
 			else if(strstr((char*)USART2_RxBuffer, "SET_TIMER_ONCE:") != NULL)
 			{
-								// 使用 sscanf 提取数字
+				// 使用 sscanf 提取数字
 				if (sscanf((char*)USART2_RxBuffer, "SET_TIMER_ONCE:%d", &res.interval) == 1)
 				{
 					if (res.interval > 0) 
@@ -88,13 +88,19 @@ ConfigResult_t Enter_Wait_Config_Mode(int *history_array, uint16_t *p_count)
 					}		
 				}
 			}
-			
 			/* 状态 3：等待上位机发送 "DIRECTend" ,直接拍照上传数据*/
 			else if(strstr((char*)USART2_RxBuffer, "DIRECTend") != NULL)
 			{
 					res.mode = MODE_DIRECT;
 				  USART2_RxPacket_Clear();				// 退出前清空标志
 				  return res;
+			}
+			/* 状态 4：等待上位机发送 "DIRECTKKK" ,直接拍照上传照片数据*/
+			else if(strstr((char*)USART2_RxBuffer, "DIRECTKKK") != NULL)
+			{
+				USART2_RxPacket_Clear();				// 退出前清空标志
+				res.mode = MODE_TPHOTO;
+				return res;
 			}
 			// 处理完一帧数据后，清空接收缓冲区准备收下一帧
 			USART2_RxPacket_Clear();

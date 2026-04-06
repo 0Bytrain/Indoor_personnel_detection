@@ -120,6 +120,7 @@ int main(void)
   MX_X_CUBE_AI_Init();
   /* USER CODE BEGIN 2 */ 
 	extern uint8_t usart2_rx_byte;
+	extern uint16_t image_buffer[PIXELS];	//图像储存区
 	int result = 0;		//人数结果
 	uint16_t history_count =  0;		//本地数组索引
   int history_faces[256] = {0};		//本地储存人数信息数组(重复定时)	// history_faces[255](单次定时)
@@ -141,6 +142,24 @@ int main(void)
 		{
 			current_config = Enter_Wait_Config_Mode(history_faces, &history_count);
 			last_capture_tick = HAL_GetTick();	//重置计时器
+		}
+		else if(current_config.mode == MODE_TPHOTO)
+		{
+			/*拍照初始化和拍摄*/
+			demo_run();
+			printf("image:");
+			for (uint32_t i = 0; i < 160 * 160; i++) 
+			{
+					uint16_t pixel = image_buffer[i];
+					// 提取高 8 位和低 8 位，以十六进制字符串格式打印
+					printf("%02X%02X", (pixel >> 8) & 0xFF, pixel & 0xFF);
+					delay_ms(1); 
+			}
+			printf("end\r\n");
+			/*单次的人数结果*/
+			result = MX_X_CUBE_AI_Process();
+			printf("order0people%dend",result);
+			current_config.mode = MODE_IDLE;	//恢复空闲模式
 		}
 		else if(current_config.mode == MODE_DIRECT)
 		{
