@@ -128,10 +128,12 @@ int main(void)
   /* USER CODE BEGIN 2 */ 
 	extern uint8_t usart2_rx_byte;
 	extern uint16_t image_buffer[PIXELS];	//图像储存区
+	extern uint8_t USART2_RxBuffer[USART2_RX_BUFFER_SIZE];
+  extern volatile uint8_t USART2_RxFlag;
+	
 	int result = 0;		//人数结果
 	uint16_t history_count =  0;		//本地数组索引
   int history_faces[256] = {0};		//本地储存人数信息数组(重复定时)	// history_faces[255](单次定时)
-	char message[20]; 							//用于存储字符和数字
 	uint32_t last_capture_tick = 0; //用于记录定时器打卡
 	
 	ConfigResult_t current_config = {MODE_IDLE,0,0};	//结构体初始化
@@ -153,19 +155,55 @@ int main(void)
 		else if(current_config.mode == MODE_TPHOTO)
 		{
 			/*拍照初始化和拍摄*/
-			result = Capture_Process_Faces();
-			printf("image:");
-			for (uint32_t i = 0; i < PIXELS; i++) 
+			demo_run();
+			// 每一包包含 256 个像素 (256像素 * 4字节/像素 = 1024 字节的数据体)
+			const uint32_t PIXELS_PER_PACKET = 256; 
+			uint32_t i = 0;
+			while (i < PIXELS) 
 			{
-					uint16_t pixel = image_buffer[i];
-					// 提取高 8 位和低 8 位，以十六进制字符串格式打印
-					printf("%02X%02X", (pixel >> 8) & 0xFF, pixel & 0xFF);
-					delay_ms(2); 
+				// 发送包头
+				printf("image:");
+				// 发送最高 1024 字节的数据体
+				uint32_t current_chunk_pixels = 0;
+				while (i < PIXELS && current_chunk_pixels < PIXELS_PER_PACKET) 
+				{
+						uint16_t pixel = image_buffer[i];
+						printf("%02X%02X", (pixel >> 8) & 0xFF, pixel & 0xFF);
+						i++;
+						current_chunk_pixels++;
+				}
+				// 发送包尾
+				printf("end");
+				// 等待 ESP-01s 回传 "RCEOK" (带超时重传机制)
+				uint32_t timeout = 0;
+				uint8_t ack_received = 0;
+				while (timeout < 3000) // 设置 3000ms 的超时时间
+				{
+					// 检查是否收到上位机发来的新数据（以换行符结尾）
+					if (USART2_RxFlag == 1)
+					{
+						if ( strstr((const char*)USART2_RxBuffer, "RCEOK") != NULL )
+						{
+							ack_received = 1;
+							USART2_RxPacket_Clear(); // 清空接收缓存，为下一包做准备
+							break;
+						}
+					}
+					delay_ms(1);
+					timeout++;
+				}
+				// 超时处理逻辑
+				if (!ack_received) 
+				{
+					// 1秒内没收到 RCEOK，说明丢包了
+					current_config.mode = MODE_IDLE; //恢复空闲模式
+					break;													 //退出传输直接进入等待区
+				}
 			}
-			printf("end\r\n");
 			/*单次的人数结果*/
-			printf("order0people%dend",result);
-			current_config.mode = MODE_IDLE;	//恢复空闲模式
+			result = MX_X_CUBE_AI_Process();
+			printf("order0people%dend", result); 
+			current_config.mode = MODE_IDLE; //恢复空闲模式
 		}
 		else if(current_config.mode == MODE_DIRECT)
 		{
@@ -188,7 +226,8 @@ int main(void)
 						history_faces[history_count++] = result;
 					}
 					// 模拟按钮：存够2个回配置模式
-					if (history_count >= 2) {
+					if (history_count >= 2) 
+					{
 							current_config.mode = MODE_IDLE;
 					}
 				}
@@ -200,19 +239,7 @@ int main(void)
 				last_capture_tick = HAL_GetTick();	//重新计时
 			}
 		}
-		/*单次传输人数信息使用下面代码(注意初始化char message[20])*/
-#define  PEOPLE_NUMBER		0
-#if (PEOPLE_NUMBER)
-		if(result >= 0) {
-      sprintf(message, "Faces: %d\r\n", result);
-    } else {
-      sprintf(message, "Error: %d\r\n", result);
-    }
-		HAL_UART_Transmit(&huart2 , (uint8_t*)message , strlen(message),100);
-		delay_ms(500);
-		printf("[FACES_END]");
-		delay_ms(15000);
-#endif		
+		
   }
 	/* USER CODE END WHILE */	
 	

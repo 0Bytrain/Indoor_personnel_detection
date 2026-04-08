@@ -11,7 +11,6 @@ Objects/
 *.uvguix.*
 *.Bytrain
 *.cheche
-*.uvoptx
 
 
 # 3. 必须要保留的文件（重要！）
@@ -26,3 +25,5 @@ Objects/
 *.elf
 *.hex
 *.bin
+*.htm
+*.lnp

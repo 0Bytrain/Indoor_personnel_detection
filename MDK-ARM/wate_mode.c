@@ -31,13 +31,13 @@ static void Process_Get_History(int *history_array, uint16_t *p_count)
 {
     if (*p_count == 0) // 单次触发结果（或者最开始什么都没有）
     {
-        printf("order0people%dend\r\n", history_array[255]);
+        printf("order0people%dend", history_array[255]);
     }
     else // 持续触发结果
     {
         for (int i = 0; i < *p_count; i++)
         {
-            printf("order%dpeople%dend\r\n", (i + 1), history_array[i]);
+            printf("order%dpeople%dend", (i + 2), history_array[i]);
             delay_ms(100); // 防止发送过快导致 ESP8266 缓冲区溢出
         }
         // 清空本地记录：通过指针把外面的 history_count 清零
@@ -115,4 +115,5 @@ ConfigResult_t Enter_Wait_Config_Mode(int *history_array, uint16_t *p_count)
 		delay_ms(100); // 稍微延时，防止死循环卡死 CPU
 	}
 }
+
 
