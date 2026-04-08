@@ -6,7 +6,8 @@ typedef enum{
 	MODE_IDLE = 0,		//这里手动写上其实是显示表达，不写也是默认为0
 	MODE_DIRECT,			//1
 	MODE_CONTINUOUS,	//2
-	MODE_SINGLE				//3
+	MODE_SINGLE,			//3
+	MODE_TPHOTO				//4
 }	WorkMode_t;
 typedef struct {
 	WorkMode_t mode;	//当前模式

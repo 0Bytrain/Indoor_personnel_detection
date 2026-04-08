@@ -33,6 +33,10 @@
 
 #define HAEDWAREBUG          1
 
+/* ================= ≈‰÷√ ================= */
+
+#define PIXELS     (DEMO_OUTPUT_WIDTH * DEMO_OUTPUT_HEIGHT)
+#define BYTES      (PIXELS * 2U)
 
 void demo_run(void);
 
