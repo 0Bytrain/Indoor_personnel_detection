@@ -16,4 +16,7 @@ typedef struct {
 } ConfigResult_t;		//配置结果的类型（命名时加_t一般就是类型）
 
 ConfigResult_t Enter_Wait_Config_Mode(int *history_array, uint16_t *p_count);
+// 新增的停机模式与RTC配置函数
+void System_RTC_Init(void);
+void Enter_Stop_Mode(uint32_t interval_sec);
 #endif

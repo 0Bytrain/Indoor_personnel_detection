@@ -125,7 +125,9 @@ int main(void)
   MX_USART2_UART_Init();
   MX_TIM2_Init();
   MX_X_CUBE_AI_Init();
+	System_RTC_Init();
   /* USER CODE BEGIN 2 */ 
+	
 	extern uint8_t usart2_rx_byte;
 	extern uint16_t image_buffer[PIXELS];	//图像储存区
 	extern uint8_t USART2_RxBuffer[USART2_RX_BUFFER_SIZE];
@@ -150,7 +152,7 @@ int main(void)
 		if(current_config.mode == MODE_IDLE)
 		{
 			current_config = Enter_Wait_Config_Mode(history_faces, &history_count);
-			last_capture_tick = HAL_GetTick();	//重置计时器
+//			last_capture_tick = HAL_GetTick();	//重置计时器
 		}
 		else if(current_config.mode == MODE_TPHOTO)
 		{
@@ -195,7 +197,7 @@ int main(void)
 				// 超时处理逻辑
 				if (!ack_received) 
 				{
-					// 1秒内没收到 RCEOK，说明丢包了
+					// 3秒内没收到 RCEOK，说明丢包了
 					current_config.mode = MODE_IDLE; //恢复空闲模式
 					break;													 //退出传输直接进入等待区
 				}
@@ -214,8 +216,10 @@ int main(void)
 		}
 		else if(current_config.mode == MODE_CONTINUOUS || current_config.mode == MODE_SINGLE)
 		{
-			if (HAL_GetTick() - last_capture_tick >= (current_config.interval * 1000)) 
-			{
+			  /*直接休眠interval秒*/
+				Enter_Stop_Mode(current_config.interval);
+//			if (HAL_GetTick() - last_capture_tick >= (current_config.interval * 1000)) 
+//			{
 				/*单次的人数结果*/
 				result = Capture_Process_Faces();
 				/*存本地操作*/
@@ -230,14 +234,15 @@ int main(void)
 					{
 							current_config.mode = MODE_IDLE;
 					}
+					//若是不够三次就会从while（1）开始发现还是这个模式接着来休眠。
 				}
 				else // 单次模式
 				{
 					history_faces[255] = result;
 					current_config.mode = MODE_IDLE; // 执行完一次就回去
 				}
-				last_capture_tick = HAL_GetTick();	//重新计时
-			}
+//				last_capture_tick = HAL_GetTick();	//重新计时
+//			}
 		}
 		
   }
