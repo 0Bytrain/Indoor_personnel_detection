@@ -183,8 +183,7 @@ static int ai_run(void)
 /* USER CODE BEGIN 2 */
 extern uint16_t image_buffer[160*160];
 AI_ALIGNED(32)
-//static ai_i8 in_data[AI_NETWORK_IN_1_SIZE];
-static ai_i8 *in_data = NULL;   // ? 只是指针，省下 75KB
+static ai_i8 *in_data = NULL;   // 只是指针，省下 75KB
 
 #include <math.h>  // 用于round函数
 int acquire_and_process_data(ai_i8* data[])
@@ -192,7 +191,7 @@ int acquire_and_process_data(ai_i8* data[])
     float input_scale = 0.003337178146466613f;
     ai_i8 input_zero_point = -128;
 
-    if (in_data == NULL) return -1;   // ? 防止未初始化就写
+    if (in_data == NULL) return -1;   //  防止未初始化就写
 
     for(int c = 0; c < 3; c++)
     for(int h = 0; h < 160; h++)
@@ -216,7 +215,7 @@ int acquire_and_process_data(ai_i8* data[])
         in_data[chw_index] = (ai_i8)roundf(q);
     }
 
-    /* ? 删掉：不要再改 ai_input[0].data */
+    /* 删掉：不要再改 ai_input[0].data */
     /* ai_input[0].data = AI_HANDLE_PTR(in_data); */
 
     return 0;

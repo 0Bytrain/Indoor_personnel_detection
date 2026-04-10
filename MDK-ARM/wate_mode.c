@@ -22,6 +22,102 @@
 #include "mc2640.h"//这里有延时函数不要删！！！
 extern uint8_t USART2_RxBuffer[USART2_RX_BUFFER_SIZE];
 extern volatile uint8_t USART2_RxFlag;
+
+// 定义 RTC 句柄（如果你没有在CubeMX中配置RTC，可以直接在这里定义）
+RTC_HandleTypeDef hrtc;
+
+/**
+ * @brief  初始化系统 RTC 和 LSI (32kHz) 时钟
+ * @note   在 main 函数的初始化阶段调用一次即可
+ */
+void System_RTC_Init(void)
+{
+    RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+    RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = {0};
+
+    // 开启内部低速时钟 (LSI)
+    RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_LSI;
+    RCC_OscInitStruct.LSIState = RCC_LSI_ON;
+    if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
+        Error_Handler();
+    }
+
+    // 选择 LSI 作为 RTC 时钟源
+    PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_RTC;
+    PeriphClkInitStruct.RTCClockSelection = RCC_RTCCLKSOURCE_LSI;
+    if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK) {
+        Error_Handler();
+    }
+
+    // 使能 RTC 时钟
+    __HAL_RCC_RTC_ENABLE();
+
+    // 配置 RTC 基本参数 (分频后为1Hz)
+    hrtc.Instance = RTC;
+    hrtc.Init.HourFormat = RTC_HOURFORMAT_24;
+    hrtc.Init.AsynchPrediv = 127;  // (127+1) * (255+1) = 32768 Hz -> 1Hz
+    hrtc.Init.SynchPrediv = 255;
+    hrtc.Init.OutPut = RTC_OUTPUT_DISABLE;
+    hrtc.Init.OutPutPolarity = RTC_OUTPUT_POLARITY_HIGH;
+    hrtc.Init.OutPutType = RTC_OUTPUT_TYPE_OPENDRAIN;
+    if (HAL_RTC_Init(&hrtc) != HAL_OK) {
+        Error_Handler();
+    }
+
+    // 配置并使能 RTC WakeUp 中断
+    HAL_NVIC_SetPriority(RTC_WKUP_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(RTC_WKUP_IRQn);
+}
+
+/**
+ * @brief  进入 STOP 模式，并定时唤醒
+ * @param  interval_sec : 休眠时间（单位：秒）
+ */
+void Enter_Stop_Mode(uint32_t interval_sec)
+{
+    // 清除唤醒标志
+    __HAL_PWR_CLEAR_FLAG(PWR_FLAG_WU);
+    __HAL_RTC_WAKEUPTIMER_CLEAR_FLAG(&hrtc, RTC_FLAG_WUTF);
+
+    // 设置 RTC 唤醒定时器 (使用 CK_SPRE_16BITS 时钟源，1 tick = 1秒)
+    if (HAL_RTCEx_SetWakeUpTimer_IT(&hrtc, interval_sec, RTC_WAKEUPCLOCK_CK_SPRE_16BITS) != HAL_OK) {
+        Error_Handler();
+    }
+
+    // 使能 EXTI Line 17 (RTC Wakeup专用唤醒线，非常关键)
+    EXTI_D1->IMR1 |= EXTI_IMR1_IM17;
+    EXTI->RTSR1 |= EXTI_RTSR1_TR17;
+
+    // 暂停 SysTick (防止滴答定时器提前把单片机吵醒)
+    HAL_SuspendTick();
+
+    // 进入 STOP 模式 (WFI 指令)
+    HAL_PWR_EnterSTOPMode(PWR_MAINREGULATOR_ON, PWR_STOPENTRY_WFI);
+
+    /* ========================================================= */
+    /* ================== 单片机在此处睡着了 =================== */
+    /* ========================================================= */
+    
+    // 唤醒后，第一时间恢复 SysTick
+    HAL_ResumeTick();
+
+    // 重新配置系统主时钟 (唤醒后默认使用的是 HSI 内部低速时钟)
+    extern void SystemClock_Config(void);
+    SystemClock_Config();
+
+    //关闭唤醒定时器，准备下一次使用
+    HAL_RTCEx_DeactivateWakeUpTimer(&hrtc);
+}
+
+/**
+ * @brief RTC 唤醒中断服务函数
+ * @note  如果你在 stm32h7xx_it.c 里已经有了这个函数，请把它删掉或者把里面的内容写在那边
+ */
+void RTC_WKUP_IRQHandler(void)
+{
+    HAL_RTCEx_WakeUpTimerIRQHandler(&hrtc);
+}
+
 //尝试用结构体返回值来写(主要是状态三用了全局变量)
 
 /**

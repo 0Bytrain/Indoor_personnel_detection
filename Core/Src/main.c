@@ -79,6 +79,22 @@ int Capture_Process_Faces(void)
 	res = MX_X_CUBE_AI_Process();
 	return res;
 }
+
+/* USER CODE BEGIN 0 */
+
+// 定义一个全局标志位，用来记录是否是按键唤醒的
+volatile uint8_t button_wakeup_flag = 0; 
+
+// 重写外部中断回调函数 (刚刚 gpio.c 里的 EXTI0_IRQHandler 会自动调用它)
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+    if (GPIO_Pin == GPIO_PIN_0) 
+    {
+        button_wakeup_flag = 1; // 标记：按键把叫醒的！
+    }
+}
+
+/* USER CODE END 0 */
 /* USER CODE END 0 */
 
 /**
@@ -120,12 +136,15 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+	Manual_Button_EXTI_Init();
   MX_DMA_Init();
   MX_DCMI_Init();
   MX_USART2_UART_Init();
   MX_TIM2_Init();
   MX_X_CUBE_AI_Init();
+	System_RTC_Init();
   /* USER CODE BEGIN 2 */ 
+	
 	extern uint8_t usart2_rx_byte;
 	extern uint16_t image_buffer[PIXELS];	//图像储存区
 	extern uint8_t USART2_RxBuffer[USART2_RX_BUFFER_SIZE];
@@ -150,7 +169,7 @@ int main(void)
 		if(current_config.mode == MODE_IDLE)
 		{
 			current_config = Enter_Wait_Config_Mode(history_faces, &history_count);
-			last_capture_tick = HAL_GetTick();	//重置计时器
+//			last_capture_tick = HAL_GetTick();	//重置计时器
 		}
 		else if(current_config.mode == MODE_TPHOTO)
 		{
@@ -195,7 +214,7 @@ int main(void)
 				// 超时处理逻辑
 				if (!ack_received) 
 				{
-					// 1秒内没收到 RCEOK，说明丢包了
+					// 3秒内没收到 RCEOK，说明丢包了
 					current_config.mode = MODE_IDLE; //恢复空闲模式
 					break;													 //退出传输直接进入等待区
 				}
@@ -214,8 +233,17 @@ int main(void)
 		}
 		else if(current_config.mode == MODE_CONTINUOUS || current_config.mode == MODE_SINGLE)
 		{
-			if (HAL_GetTick() - last_capture_tick >= (current_config.interval * 1000)) 
-			{
+			  // 停机前先把按键标志位清零，防止受之前误触的影响
+        button_wakeup_flag = 0;
+			  /*直接休眠interval秒*/
+				Enter_Stop_Mode(current_config.interval);
+			  if(button_wakeup_flag == 1)
+				{
+					/*按键唤醒直接进入IDLE模式*/
+					current_config.mode = MODE_IDLE;
+					/*直接重新开始循环*/
+					continue;
+				}
 				/*单次的人数结果*/
 				result = Capture_Process_Faces();
 				/*存本地操作*/
@@ -230,14 +258,13 @@ int main(void)
 					{
 							current_config.mode = MODE_IDLE;
 					}
+					//若是不够三次就会从while（1）开始发现还是这个模式接着来休眠。
 				}
-				else // 单次模式
+				else if (current_config.mode == MODE_SINGLE) // 单次模式
 				{
 					history_faces[255] = result;
 					current_config.mode = MODE_IDLE; // 执行完一次就回去
 				}
-				last_capture_tick = HAL_GetTick();	//重新计时
-			}
 		}
 		
   }

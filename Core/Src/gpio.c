@@ -75,4 +75,42 @@ void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 2 */
 
+/**
+ * @brief 纯手写配置 PA0 为外部按键中断 (唤醒停机模式)
+ * @note  按键一端接 PA0，另一端接 GND
+ */
+void Manual_Button_EXTI_Init(void)
+{
+    GPIO_InitTypeDef GPIO_InitStruct = {0};
+
+    /* 开启 GPIOA 时钟 (虽然 MX_GPIO_Init 里已经开了，但为了函数独立性再写一遍，不会冲突) */
+    __HAL_RCC_GPIOA_CLK_ENABLE();
+
+    /* 配置 PA0 引脚为外部中断模式 */
+    GPIO_InitStruct.Pin = GPIO_PIN_0;
+    // 选择下降沿触发中断 (即按下按键，电平从 3.3V 变到 0V 的瞬间触发)
+    GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING; 
+    // 开启内部上拉电阻 (这步最关键！保证松开按键时 PA0 是稳定的高电平)
+    GPIO_InitStruct.Pull = GPIO_PULLUP;          
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+    /*配置 NVIC 中断控制器 */
+    // 设置中断优先级为 2 (可以根据需要调整，避开重要系统中断即可)
+    HAL_NVIC_SetPriority(EXTI0_IRQn, 2, 0);
+    //使能 EXTI0 中断通道
+    HAL_NVIC_EnableIRQ(EXTI0_IRQn);
+}
+
+/**
+ * @brief EXTI0 中断服务函数 (专门处理 PA0 触发的中断)
+ * @note  把中断函数写在 USER CODE 里面是最安全的，CubeMX 绝对删不掉
+ */
+void EXTI0_IRQHandler(void)
+{
+    // 调用 HAL 库的外部中断通用处理函数
+    // 它会自动清除底层的中断标志位（官方库里的 HAL_GPIO_EXTI_Callback会负责）
+	  // 并跳转去执行在 main.c 里写的 HAL_GPIO_EXTI_Callback
+    HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_0);
+}
+
 /* USER CODE END 2 */
