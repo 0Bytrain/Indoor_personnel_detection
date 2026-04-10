@@ -1,0 +1,8 @@
+有一点需要注意我的实时RTC停机定时器是自己配置的，没有使用cubemx。所以之后用cubemx生成代码后要重新取消#define HAL_RTC_MODULE_ENABLED注释，并且将Drivers/STM32H7xx_HAL_Driver里的文件
+stm32h7xx_hal_rtc.c
+
+stm32h7xx_hal_rtc_ex.c
+重新导入。
+
+4.10
+新增GPIO外部中断触发也是自己配置并且写中断回传函数，通过一个全局变量来标明是外部触发的唤醒而不是定时时间到了的唤醒。同样不可以用cubemx生成代码。以后禁用吧，反正也用不着了大概率。
