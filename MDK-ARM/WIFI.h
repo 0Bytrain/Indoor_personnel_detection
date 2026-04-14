@@ -2,7 +2,7 @@
 #define __ESP8266_H
  
 #include "main.h" 
-
+#include "wait_mode.h"
 #define USART2_RX_BUFFER_SIZE 256
 
 extern uint8_t USART2_RxBuffer[USART2_RX_BUFFER_SIZE];
@@ -31,6 +31,8 @@ extern uint8_t USART2_RxBuffer[USART2_RX_BUFFER_SIZE];
 void USART2_RxPacket_Clear(void);
 void USART2_Start_Receive(void);
 void USART2_ReceiveHandler(uint8_t receivedData);
+void ESP8266_TPhoto(ConfigResult_t * WIFIConfig,uint16_t *img_buf,int *Result);//´«ÊäÍ¼Æ¬º¯Êý
+
 char* ESP8266_GetResponse(void);
 uint8_t ESP8266_DataReady(void);
 uint8_t ESP8266_Send_Command(char *Cmd, char *Res);

@@ -10,6 +10,8 @@
 #include <string.h>
 #include "stm32h743xx.h"
 #include "WIFI.h"
+#include "wait_mode.h"
+#include "app_x-cube-ai.h"
 #include <stdlib.h>  // 用于sprintf等函数
 /*这段为uart配置，与WIFi无关*/
 uint8_t USART2_RxBuffer[USART2_RX_BUFFER_SIZE];
@@ -17,7 +19,9 @@ volatile uint16_t USART2_RxIndex;
 volatile uint8_t USART2_RxFlag;
 // 全局变量定义
 uint8_t usart2_rx_byte;
-// 清空接收缓冲区
+/**
+* @brief	串口缓存清空函数
+*/
 void USART2_RxPacket_Clear(void)
 {
     USART2_RxIndex = 0;
@@ -25,7 +29,10 @@ void USART2_RxPacket_Clear(void)
     memset(USART2_RxBuffer, 0, USART2_RX_BUFFER_SIZE);
 }
 
-// 接收完成回调函数
+/**
+* @brief	接收完成回调函数
+* @note		收到\n表示收到一个命令，改变标志位表示接收完成
+*/
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
     if (huart->Instance == USART2) 
@@ -51,7 +58,69 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
         HAL_UART_Receive_IT(&huart2, &usart2_rx_byte, 1);
     }
 }
-
+/**
+*	@brief	WIFI传图函数
+* @param	WIFIConfig：文件"wait_mode.h"里的模式结构体
+* @param	img_buf		：照片数据
+* @param	Result		: 识别结果（main.c里定义了）
+* @note		通过握手的方式使图传更加稳定
+*/
+void ESP8266_TPhoto(ConfigResult_t * WIFIConfig,uint16_t *img_buf,int *Result)
+{
+		  /*拍照初始化和拍摄*/
+			demo_run();
+			// 每一包包含 256 个像素 (256像素 * 4字节/像素 = 1024 字节的数据体)
+			const uint32_t PIXELS_PER_PACKET = 256; 
+			uint32_t i = 0;
+			while (i < PIXELS) 
+			{
+				// 发送包头
+				printf("image:");
+				// 发送最高 1024 字节的数据体
+				uint32_t current_chunk_pixels = 0;
+				while (i < PIXELS && current_chunk_pixels < PIXELS_PER_PACKET) 
+				{
+					  /*此处传入指针*/
+						uint16_t pixel = img_buf[i];
+						printf("%02X%02X", (pixel >> 8) & 0xFF, pixel & 0xFF);
+						i++;
+						current_chunk_pixels++;
+				}
+				// 发送包尾
+				printf("end");
+				// 等待 ESP-01s 回传 "RCEOK" (带超时重传机制)
+				uint32_t timeout = 0;
+				uint8_t ack_received = 0;
+				while (timeout < 3000) // 设置 3000ms 的超时时间
+				{
+					// 检查是否收到上位机发来的新数据（以换行符结尾）
+					if (USART2_RxFlag == 1)
+					{
+						if ( strstr((const char*)USART2_RxBuffer, "RCEOK") != NULL )
+						{
+							ack_received = 1;
+							USART2_RxPacket_Clear(); // 清空接收缓存，为下一包做准备
+							break;
+						}
+					}
+					delay_ms(1);
+					timeout++;
+				}
+				// 超时处理逻辑
+				if (!ack_received) 
+				{
+					// 3秒内没收到 RCEOK，说明丢包了
+					WIFIConfig->mode = MODE_IDLE; //恢复空闲模式
+					break;													 //退出传输直接进入等待区
+				}
+			}
+			/*单次的人数结果*/
+			int res = 0;//定义一个局部变量保护指针里的地址，防止AI运行越界导致指针地址被破坏从而卡死；
+			res= MX_X_CUBE_AI_Process();
+			*Result = res;
+			printf("order0people%dend", *Result); 
+			WIFIConfig->mode = MODE_IDLE; //恢复空闲模式
+}
 /****************************************************************************************************************/
 /*下面是WIFI的AT指令配置函数*/
 /**

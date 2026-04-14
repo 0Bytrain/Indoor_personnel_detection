@@ -173,56 +173,9 @@ int main(void)
 		}
 		else if(current_config.mode == MODE_TPHOTO)
 		{
-			/*拍照初始化和拍摄*/
-			demo_run();
-			// 每一包包含 256 个像素 (256像素 * 4字节/像素 = 1024 字节的数据体)
-			const uint32_t PIXELS_PER_PACKET = 256; 
-			uint32_t i = 0;
-			while (i < PIXELS) 
-			{
-				// 发送包头
-				printf("image:");
-				// 发送最高 1024 字节的数据体
-				uint32_t current_chunk_pixels = 0;
-				while (i < PIXELS && current_chunk_pixels < PIXELS_PER_PACKET) 
-				{
-						uint16_t pixel = image_buffer[i];
-						printf("%02X%02X", (pixel >> 8) & 0xFF, pixel & 0xFF);
-						i++;
-						current_chunk_pixels++;
-				}
-				// 发送包尾
-				printf("end");
-				// 等待 ESP-01s 回传 "RCEOK" (带超时重传机制)
-				uint32_t timeout = 0;
-				uint8_t ack_received = 0;
-				while (timeout < 3000) // 设置 3000ms 的超时时间
-				{
-					// 检查是否收到上位机发来的新数据（以换行符结尾）
-					if (USART2_RxFlag == 1)
-					{
-						if ( strstr((const char*)USART2_RxBuffer, "RCEOK") != NULL )
-						{
-							ack_received = 1;
-							USART2_RxPacket_Clear(); // 清空接收缓存，为下一包做准备
-							break;
-						}
-					}
-					delay_ms(1);
-					timeout++;
-				}
-				// 超时处理逻辑
-				if (!ack_received) 
-				{
-					// 3秒内没收到 RCEOK，说明丢包了
-					current_config.mode = MODE_IDLE; //恢复空闲模式
-					break;													 //退出传输直接进入等待区
-				}
-			}
-			/*单次的人数结果*/
-			result = MX_X_CUBE_AI_Process();
-			printf("order0people%dend", result); 
-			current_config.mode = MODE_IDLE; //恢复空闲模式
+			/*用了指针写参数时记得用取地址符&*/
+			//数组image_buffer本身就是地址所以不用&
+			ESP8266_TPhoto(&current_config,image_buffer,&result);
 		}
 		else if(current_config.mode == MODE_DIRECT)
 		{
