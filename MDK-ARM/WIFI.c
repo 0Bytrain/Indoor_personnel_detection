@@ -115,7 +115,9 @@ void ESP8266_TPhoto(ConfigResult_t * WIFIConfig,uint16_t *img_buf,int *Result)
 				}
 			}
 			/*单次的人数结果*/
-			*Result = MX_X_CUBE_AI_Process();
+			int res = 0;
+			res= MX_X_CUBE_AI_Process();
+			*Result = res;
 			printf("order0people%dend", *Result); 
 			WIFIConfig->mode = MODE_IDLE; //恢复空闲模式
 }
