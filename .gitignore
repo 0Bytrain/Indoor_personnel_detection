@@ -11,10 +11,11 @@ Objects/
 *.uvguix.*
 *.Bytrain
 *.cheche
+*.uvoptx
 
 
 # 必须要保留的文件（重要！）
-# 你的 .c, .h, .s, .uvprojx, .uvoptx, .sct 都在这里，Git 默认会保留它们
+# 你的 .c, .h, .s, .uvprojx, , .sct 都在这里，Git 默认会保留它们
 # 只要我们不写 *.c，它们就是安全的
 
 # 4. 忽略编译产物
