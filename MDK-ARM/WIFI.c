@@ -115,7 +115,7 @@ void ESP8266_TPhoto(ConfigResult_t * WIFIConfig,uint16_t *img_buf,int *Result)
 				}
 			}
 			/*单次的人数结果*/
-			int res = 0;
+			int res = 0;//定义一个局部变量保护指针里的地址，防止AI运行越界导致指针地址被破坏从而卡死；
 			res= MX_X_CUBE_AI_Process();
 			*Result = res;
 			printf("order0people%dend", *Result); 

@@ -1,10 +1,10 @@
-# 1. 忽略文件夹（这些是编译生成的，或者是自动生成的环境）
+# 忽略文件夹（这些是编译生成的，或者是自动生成的环境）
 DebugConfig/
 RTE/
 Listings/
 Objects/
 
-# 2. 忽略具体的 Keil 临时文件
+# 忽略具体的 Keil 临时文件
 *.bak
 *.dep
 *.uvgui.*
@@ -13,7 +13,7 @@ Objects/
 *.cheche
 
 
-# 3. 必须要保留的文件（重要！）
+# 必须要保留的文件（重要！）
 # 你的 .c, .h, .s, .uvprojx, .uvoptx, .sct 都在这里，Git 默认会保留它们
 # 只要我们不写 *.c，它们就是安全的
 
@@ -27,3 +27,7 @@ Objects/
 *.bin
 *.htm
 *.lnp
+
+#vscode里的日志啥的不用传输。
+.vscode/
+*.log
