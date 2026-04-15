@@ -66,8 +66,8 @@
 #define NUM_CLASS 1 // 类别数量
 #define MAX_BOXNUM 30// 最大检测框数量
 // 使用与Python代码相同的阈值
-#define CONF_THRESHOLD 0.13f
-#define NMS_IOU 0.35f 
+#define CONF_THRESHOLD 0.14f
+#define NMS_IOU 0.31f 
 #define MAX(a,b) ((a>b)? a:b)
 #define MIN(a,b) ((a<b)? a:b)
 /* USER CODE END includes */

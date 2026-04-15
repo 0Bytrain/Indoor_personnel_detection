@@ -162,14 +162,13 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
-  {		
+  {	
     /* USER CODE END WHILE */
     /* USER CODE BEGIN 3 */
 		/*空闲模式*/
 		if(current_config.mode == MODE_IDLE)
 		{
 			current_config = Enter_Wait_Config_Mode(history_faces, &history_count);
-//			last_capture_tick = HAL_GetTick();	//重置计时器
 		}
 		else if(current_config.mode == MODE_TPHOTO)
 		{
