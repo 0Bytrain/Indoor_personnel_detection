@@ -97,7 +97,7 @@ void ESP8266_TPhoto(ConfigResult_t * WIFIConfig,uint16_t *img_buf,int *Result)
         // 等待 ESP-01s 回传状态
         uint32_t timeout = 0;
         uint8_t ack_status = 0; // 0:超时丢包, 1:收到RCEOK, 2:收到NOK
-        while (timeout < 8000) // 设置 3000ms 的超时时间
+        while (timeout < 5000) // 设置 5000ms 的超时时间
         {
             // 检查是否收到上位机发来的新数据
             if (USART2_RxFlag == 1)
@@ -140,7 +140,7 @@ void ESP8266_TPhoto(ConfigResult_t * WIFIConfig,uint16_t *img_buf,int *Result)
         }
         else 
         {
-            // ack_status == 0，3秒超时，说明彻底断开或没网了
+            // ack_status == 0，5秒超时，说明彻底断开或没网了
             WIFIConfig->mode = MODE_IDLE; // 恢复空闲模式
             break;                        // 退出传输直接进入等待区
         }
