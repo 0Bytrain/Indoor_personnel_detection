@@ -376,8 +376,8 @@ int post_process(float boxes[MAX_BOXNUM][5])
             if(y1 < 0) y1 = 0;
             if(x2 > IMGHW-1) x2 = IMGHW-1;
             if(y2 > IMGHW-1) y2 = IMGHW-1;         	
-//						printf("x1=%.2f, y1=%.2f, x2=%.2f, y2=%.2f, conf=%.4f\n\r",
-//                    x1, y1, x2, y2, confidence);
+						printf("x1=%.2f, y1=%.2f, x2=%.2f, y2=%.2f, conf=%.4f\n\r",
+                    x1, y1, x2, y2, confidence);
             
             // ´æ´¢¼ì²â½á¹û [x1, y1, x2, y2, confidence]
             float box[5] = {x1, y1, x2, y2, confidence};
