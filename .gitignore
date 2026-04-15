@@ -1,10 +1,12 @@
-# 忽略文件夹（这些是编译生成的，或者是自动生成的环境）
-DebugConfig/
-RTE/
-Listings/
-Objects/
+# --- 1. 忽略文件夹（编译生成的中间目录） ---
+**/DebugConfig/
+**/RTE/
+**/Listings/
+**/Objects/
+# 针对你截图里出现的 Camera 编译输出目录
+**/MDK-ARM/Camera/
 
-# 忽略具体的 Keil 临时文件
+# --- 2. 忽略具体的 Keil 临时文件 & 配置 ---
 *.bak
 *.dep
 *.uvgui.*
@@ -13,12 +15,7 @@ Objects/
 *.cheche
 *.uvoptx
 
-
-# 必须要保留的文件（重要！）
-# 你的 .c, .h, .s, .uvprojx, , .sct 都在这里，Git 默认会保留它们
-# 只要我们不写 *.c，它们就是安全的
-
-# 4. 忽略编译产物
+# --- 3. 忽略编译产物（重点增加 .map 和 .lst） ---
 *.o
 *.d
 *.crf
@@ -28,7 +25,15 @@ Objects/
 *.bin
 *.htm
 *.lnp
+*.map
+*.lst
 
-#vscode里的日志啥的不用传输。
-.vscode/
+# --- 4. 忽略 VS Code 产生的个人配置和日志 ---
+# 忽略本项目中任何位置出现的 .vscode 文件夹
+**/.vscode/
 *.log
+*.lock
+
+# --- 5. 其他 ---
+.ai/
+.mxproject

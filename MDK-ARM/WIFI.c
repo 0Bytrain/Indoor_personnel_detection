@@ -6,7 +6,7 @@
 #include "mc2640.h"
 #include "main.h"
 #include "usart.h"
-#include <stdio.h>
+
 #include <string.h>
 #include "stm32h743xx.h"
 #include "WIFI.h"
@@ -67,59 +67,91 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 */
 void ESP8266_TPhoto(ConfigResult_t * WIFIConfig,uint16_t *img_buf,int *Result)
 {
-		  /*拍照初始化和拍摄*/
-			demo_run();
-			// 每一包包含 256 个像素 (256像素 * 4字节/像素 = 1024 字节的数据体)
-			const uint32_t PIXELS_PER_PACKET = 256; 
-			uint32_t i = 0;
-			while (i < PIXELS) 
-			{
-				// 发送包头
-				printf("image:");
-				// 发送最高 1024 字节的数据体
-				uint32_t current_chunk_pixels = 0;
-				while (i < PIXELS && current_chunk_pixels < PIXELS_PER_PACKET) 
-				{
-					  /*此处传入指针*/
-						uint16_t pixel = img_buf[i];
-						printf("%02X%02X", (pixel >> 8) & 0xFF, pixel & 0xFF);
-						i++;
-						current_chunk_pixels++;
-				}
-				// 发送包尾
-				printf("end");
-				// 等待 ESP-01s 回传 "RCEOK" (带超时重传机制)
-				uint32_t timeout = 0;
-				uint8_t ack_received = 0;
-				while (timeout < 3000) // 设置 3000ms 的超时时间
-				{
-					// 检查是否收到上位机发来的新数据（以换行符结尾）
-					if (USART2_RxFlag == 1)
-					{
-						if ( strstr((const char*)USART2_RxBuffer, "RCEOK") != NULL )
-						{
-							ack_received = 1;
-							USART2_RxPacket_Clear(); // 清空接收缓存，为下一包做准备
-							break;
-						}
-					}
-					delay_ms(1);
-					timeout++;
-				}
-				// 超时处理逻辑
-				if (!ack_received) 
-				{
-					// 3秒内没收到 RCEOK，说明丢包了
-					WIFIConfig->mode = MODE_IDLE; //恢复空闲模式
-					break;													 //退出传输直接进入等待区
-				}
-			}
-			/*单次的人数结果*/
-			int res = 0;//定义一个局部变量保护指针里的地址，防止AI运行越界导致指针地址被破坏从而卡死；
-			res= MX_X_CUBE_AI_Process();
-			*Result = res;
-			printf("order0people%dend", *Result); 
-			WIFIConfig->mode = MODE_IDLE; //恢复空闲模式
+    /*拍照初始化和拍摄*/
+    demo_run();
+    // 每一包包含 256 个像素 (256像素 * 4字节/像素 = 1024 字节的数据体)
+    const uint32_t PIXELS_PER_PACKET = 256; 
+    uint32_t i = 0;
+    // 增加最大重传次数限制，防止死循环卡死单片机
+    const uint8_t MAX_RETRY_COUNT = 3; 
+    uint8_t retry_count = 0;
+    while (i < PIXELS) 
+    {
+        // 记录当前包的起始像素索引。如果收到 NOK，需要回退到这里重新读取
+        uint32_t chunk_start_index = i; 
+        
+        // 发送包头
+        printf("image:");
+        // 发送最高 1024 字节的数据体
+        uint32_t current_chunk_pixels = 0;
+        while (i < PIXELS && current_chunk_pixels < PIXELS_PER_PACKET) 
+        {
+            /*此处传入指针*/
+            uint16_t pixel = img_buf[i];
+            printf("%02X%02X", (pixel >> 8) & 0xFF, pixel & 0xFF);
+            i++;
+            current_chunk_pixels++;
+        }
+        // 发送包尾
+        printf("end");
+        // 等待 ESP-01s 回传状态
+        uint32_t timeout = 0;
+        uint8_t ack_status = 0; // 0:超时丢包, 1:收到RCEOK, 2:收到NOK
+        while (timeout < 8000) // 设置 3000ms 的超时时间
+        {
+            // 检查是否收到上位机发来的新数据
+            if (USART2_RxFlag == 1)
+            {
+                if (strstr((const char*)USART2_RxBuffer, "RCEOK") != NULL)
+                {
+                    ack_status = 1;
+                    USART2_RxPacket_Clear(); // 清空接收缓存，为下一包做准备
+                    break;
+                }
+                else if(strstr((const char*)USART2_RxBuffer, "NOK") != NULL)
+                {
+                    ack_status = 2;
+                    USART2_RxPacket_Clear(); // 清空接收缓存
+                    break;
+                }
+            }
+            delay_ms(1);
+            timeout++;
+        }
+        
+        // --- 状态机处理逻辑 ---
+        if (ack_status == 1) 
+        {
+            // 正常收到 OK，重传计数清零，外层 while 会继续按当前 i 发送下一包
+            retry_count = 0; 
+        }
+        else if (ack_status == 2)
+        {
+            // 收到 NOK，处理重传
+            retry_count++;
+            if (retry_count > MAX_RETRY_COUNT)
+            {
+                // 超过最大重传次数依然失败，放弃本次总的图传任务
+                WIFIConfig->mode = MODE_IDLE; 
+                break;
+            }
+            // 【核心修正】：回退像素索引，使得下一轮循环重新发送这 256 个像素
+            i = chunk_start_index; 
+        }
+        else 
+        {
+            // ack_status == 0，3秒超时，说明彻底断开或没网了
+            WIFIConfig->mode = MODE_IDLE; // 恢复空闲模式
+            break;                        // 退出传输直接进入等待区
+        }
+    }
+    
+    /*单次的人数结果*/
+    int res = 0; //定义一个局部变量保护指针里的地址，防止AI运行越界导致指针地址被破坏从而卡死；
+    res = MX_X_CUBE_AI_Process();
+    *Result = res;
+    printf("order0people%dend", *Result); 
+    WIFIConfig->mode = MODE_IDLE; //恢复空闲模式
 }
 /****************************************************************************************************************/
 /*下面是WIFI的AT指令配置函数*/
