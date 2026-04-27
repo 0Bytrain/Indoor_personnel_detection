@@ -66,8 +66,8 @@
 #define NUM_CLASS 1 // 类别数量
 #define MAX_BOXNUM 30// 最大检测框数量
 // 使用与Python代码相同的阈值
-#define CONF_THRESHOLD 0.14f
-#define NMS_IOU 0.31f 
+#define CONF_THRESHOLD 0.12f
+#define NMS_IOU 0.2f 
 #define MAX(a,b) ((a>b)? a:b)
 #define MIN(a,b) ((a<b)? a:b)
 /* USER CODE END includes */
@@ -215,9 +215,6 @@ int acquire_and_process_data(ai_i8* data[])
         in_data[chw_index] = (ai_i8)roundf(q);
     }
 
-    /* 删掉：不要再改 ai_input[0].data */
-    /* ai_input[0].data = AI_HANDLE_PTR(in_data); */
-
     return 0;
 }
 
@@ -319,6 +316,9 @@ int NMS(float boxes[MAX_BOXNUM][5])
                 memcpy(boxes[new_count], boxes[i], 5 * sizeof(float));
             }
             new_count++;
+            //将最后选出的框的坐标和置信度打印出来
+            printf("x1=%.2f, y1=%.2f, x2=%.2f, y2=%.2f, conf=%.4f\n\r",
+        boxes[i][0], boxes[i][1],boxes[i][2], boxes[i][3], boxes[i][4]);
         }
     }    
     // 将剩余位置清零
@@ -336,11 +336,9 @@ int post_process(float boxes[MAX_BOXNUM][5])
     
     // 初始化boxes数组
     memset(boxes, 0, MAX_BOXNUM * 5 * sizeof(float));
-    
     // 计数器，用于统计检测到的有效框数量
     int detected_count = 0;
 		delay_ms(500);
-//    printf("[FACES_START]");
 		delay_ms(500);
   // 处理500个预测
     for(int i = 0; i < 500; i++)
@@ -356,10 +354,6 @@ int post_process(float boxes[MAX_BOXNUM][5])
         
         // 选择最大的置信度作为最终置信度
         float confidence = (confidence1 > confidence2) ? confidence1 : confidence2;
-//        
-        // 可选：打印两个置信度用于调试
-//         printf("Box %d: conf1=%.4f, conf2=%.4f, final_conf=%.4f\n", 
-//                i, confidence1, confidence2, confidence);
         
         if(confidence > CONF_THRESHOLD)
         {
@@ -375,9 +369,10 @@ int post_process(float boxes[MAX_BOXNUM][5])
             if(x1 < 0) x1 = 0;
             if(y1 < 0) y1 = 0;
             if(x2 > IMGHW-1) x2 = IMGHW-1;
-            if(y2 > IMGHW-1) y2 = IMGHW-1;         	
-						printf("x1=%.2f, y1=%.2f, x2=%.2f, y2=%.2f, conf=%.4f\n\r",
-                    x1, y1, x2, y2, confidence);
+            if(y2 > IMGHW-1) y2 = IMGHW-1;  
+            // //将所有大于阈值的框都打印出来      	
+			// printf("x1=%.2f, y1=%.2f, x2=%.2f, y2=%.2f, conf=%.4f\n\r",
+            //         x1, y1, x2, y2, confidence);
             
             // 存储检测结果 [x1, y1, x2, y2, confidence]
             float box[5] = {x1, y1, x2, y2, confidence};
@@ -389,12 +384,6 @@ int post_process(float boxes[MAX_BOXNUM][5])
 		
 				
     }
-//		if(detected_count==0){
-//        printf("x1=0.00, y1=0.00, x2=0.00, y2=0.00, conf=0.0000\n\r");
-//    }
-    
-//    // 打印总检测数量
-//    printf("Total detected boxes: %d\n\r", detected_count);
     
     return 0;
 }
@@ -416,9 +405,7 @@ void MX_X_CUBE_AI_Init(void)
 int MX_X_CUBE_AI_Process(void)
 {
     int res = -1;
-    //float boxes[MAX_BOXNUM][5] = {0};  // 每个框有5个值: x1, y1, x2, y2, confidence
-    static float boxes[MAX_BOXNUM][5];  // 使用静态存储 
-//    printf("TEMPLATE - run - main loop\r\n");
+    static float boxes[MAX_BOXNUM][5];  // 使用静态存储 ；每个box有5个值: x1, y1, x2, y2, confidence
     
     if (network) 
 			{
