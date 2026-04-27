@@ -148,14 +148,13 @@ int main(void)
 	extern uint8_t usart2_rx_byte;
 	extern uint8_t USART2_RxBuffer[USART2_RX_BUFFER_SIZE];
   extern volatile uint8_t USART2_RxFlag;
-	extern uint16_t image_buffer[PIXELS];	//图像储存区
 	
 	int result = 0;		//人数结果
-	uint16_t history_count =  0;		//本地数组索引
-  int history_faces[256] = {0};		//本地储存人数信息数组(重复定时)	// history_faces[255](单次定时)
-	uint32_t last_capture_tick = 0; //用于记录定时器打卡
+	// uint16_t history_count =  0;		//本地数组索引
+  // int history_faces[256] = {0};		//本地储存人数信息数组(重复定时)	// history_faces[255](单次定时)
+	// uint32_t last_capture_tick = 0; //用于记录定时器打卡
 	
-	ConfigResult_t current_config = {MODE_IDLE,0,0};	//结构体初始化
+	// ConfigResult_t current_config = {MODE_IDLE,0,0};	//结构体初始化
 	HAL_UART_Receive_IT(&huart2, &usart2_rx_byte, 1);	//接收初始化
   /* USER CODE END 2 */
 
@@ -163,64 +162,10 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {	
+    
 		result = MX_X_CUBE_AI_Process();
 		printf("order0people%dend",result);
-//    /* USER CODE END WHILE */
-//    /* USER CODE BEGIN 3 */
-//		/*空闲模式*/
-//		if(current_config.mode == MODE_IDLE)
-//		{
-//			current_config = Enter_Wait_Config_Mode(history_faces, &history_count);
-//		}
-//		else if(current_config.mode == MODE_TPHOTO)
-//		{
-//			/*用了指针写参数时记得用取地址符&*/
-//			//数组image_buffer本身就是地址所以不用&
-//			ESP8266_TPhoto(&current_config,image_buffer,&result);
-//		}
-//		else if(current_config.mode == MODE_DIRECT)
-//		{
-//			/*单次的人数结果*/
-//			result = Capture_Process_Faces();
-//			printf("order0people%dend",result);
-//			current_config.mode = MODE_IDLE;	//恢复空闲模式
-//		}
-//		else if(current_config.mode == MODE_CONTINUOUS || current_config.mode == MODE_SINGLE)
-//		{
-//			  // 停机前先把按键标志位清零，防止受之前误触的影响
-//        button_wakeup_flag = 0;
-//			  /*直接休眠interval秒*/
-//				Enter_Stop_Mode(current_config.interval);
-//			  if(button_wakeup_flag == 1)
-//				{
-//					/*按键唤醒直接进入IDLE模式*/
-//					current_config.mode = MODE_IDLE;
-//					/*直接重新开始循环*/
-//					continue;
-//				}
-//				/*单次的人数结果*/
-//				result = Capture_Process_Faces();
-//				/*存本地操作*/
-//				if (current_config.mode == MODE_CONTINUOUS)
-//				{
-//					if (history_count < 255) 
-//					{
-//						history_faces[history_count++] = result;
-//					}
-//					// 模拟按钮：存够2个回配置模式
-//					if (history_count >= 2) 
-//					{
-//							current_config.mode = MODE_IDLE;
-//					}
-//					//若是不够三次就会从while（1）开始发现还是这个模式接着来休眠。
-//				}
-//				else if (current_config.mode == MODE_SINGLE) // 单次模式
-//				{
-//					history_faces[255] = result;
-//					current_config.mode = MODE_IDLE; // 执行完一次就回去
-//				}
-//		}
-		
+
   }
 	/* USER CODE END WHILE */	
 	
