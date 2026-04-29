@@ -1173,6 +1173,7 @@ uint8_t atk_mc2640_set_auto_exposure(uint8_t enable)
     if (enable) {
         // 启用AEC/AGC自动控制
         atk_mc2640_write_reg(ATK_MC2640_REG_SENSOR_COM8, 0xE7);
+
     } else {
         // 禁用自动曝光，使用手动设置
         uint8_t com8 = atk_mc2640_read_reg(ATK_MC2640_REG_SENSOR_COM8);
@@ -1184,10 +1185,10 @@ uint8_t atk_mc2640_set_auto_exposure(uint8_t enable)
 }
 
 /**
- * @brief       设置曝光级别（简化接口）
+ * @brief       设置曝光级别（机器视觉/单拍优化版）
  * @param       level: 曝光级别 
- *              0: 自动曝光
- *              1-100: 手动曝光级别，值越大曝光越强
+ * 0: 自动曝光
+ * 1-100: 手动长曝光级别（纯拉长快门时间，极低噪点）
  * @retval      ATK_MC2640_EOK: 成功
  */
 uint8_t atk_mc2640_set_exposure_level(uint8_t level)
@@ -1199,35 +1200,19 @@ uint8_t atk_mc2640_set_exposure_level(uint8_t level)
     else
     {
         atk_mc2640_set_auto_exposure(0);
-
         uint32_t exposure_time;
-        uint8_t gain_value;
-
-        if (level <= 20)
+        uint8_t gain_value = 16; // 永远锁死在最低增益(1倍)，保证画面纯净无噪点
+        // 将 level (1-100) 线性映射到一个非常大的曝光范围
+        // 假设正常 UXGA 最大快门是 4096，我们允许它突破限制，让底层函数去加 extra_lines
+        // 这里的步进值可以根据你室内的实际光线调整
+        exposure_time = 1000 + (level * 300); // 范围: 1300 到 31000 行
+        // 仅在极端暗光需求 (level > 90) 时，才稍微妥协给一点点增益
+        if (level > 90)
         {
-            // 低亮区：先温和增加曝光
-            exposure_time = 80 + level * 20;      // 80 ~ 480
-            gain_value    = 16 + level / 2;       // 16 ~ 26
-        }
-        else if (level <= 50)
-        {
-            // 中亮区：主要拉曝光，增益少量增加
-            exposure_time = 480 + (level - 20) * 408;   // 480 ~ 1680
-            gain_value    = 26 + (level - 20);         // 26 ~ 56
-        }
-        else if (level <= 80)
-        {
-            // 夜视主工作区：曝光继续增加，增益缓慢加
-            exposure_time = 1680 + (level - 50) * 50;  // 1680 ~ 3180
-            gain_value    = 56 + (level - 50) / 2;     // 56 ~ 71
-        }
-        else//用于夜视
-        {
-            // 极暗区：慎重增加，避免噪声失控
-            exposure_time = 3180 + (level - 80) * 135;  // 3180 ~ 4180
-            gain_value    = 71 + (level - 80)*3;     // 71 ~ 91
+            gain_value = 16 + (level - 90); // 增益从 16 缓增到 26
         }
 
+        // 传入底层函数，dummy参数保持为0，因为底层会自动用 extra_lines 补偿超出的部分
         return atk_mc2640_set_exposure_params(exposure_time, gain_value, 0, 0);
     }
 }
