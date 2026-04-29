@@ -76,28 +76,31 @@ void MX_GPIO_Init(void)
 /* USER CODE BEGIN 2 */
 
 /**
- * @brief 纯手写配置 PA0 为外部按键中断 (唤醒停机模式)
- * @note  按键一端接 PA0，另一端接 GND
+ * @brief 纯手写配置 PA0 为外部按键中断 (唤醒停机模式 - 高电平唤醒版)
+ * @note  【硬件要求修改】：按键一端接 PA0，另一端必须接 3.3V (VCC)
  */
 void Manual_Button_EXTI_Init(void)
 {
     GPIO_InitTypeDef GPIO_InitStruct = {0};
 
-    /* 开启 GPIOA 时钟 (虽然 MX_GPIO_Init 里已经开了，但为了函数独立性再写一遍，不会冲突) */
+    /* 开启 GPIOA 时钟 */
     __HAL_RCC_GPIOA_CLK_ENABLE();
 
     /* 配置 PA0 引脚为外部中断模式 */
     GPIO_InitStruct.Pin = GPIO_PIN_0;
-    // 选择下降沿触发中断 (即按下按键，电平从 3.3V 变到 0V 的瞬间触发)
-    GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING; 
-    // 开启内部上拉电阻 (这步最关键！保证松开按键时 PA0 是稳定的高电平)
-    GPIO_InitStruct.Pull = GPIO_PULLUP;          
+    
+    // 【修改点 1】: 选择上升沿触发中断 (即按下按键，电平从 0V 变到 3.3V 的瞬间触发)
+    GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING; 
+    
+    // 【修改点 2】: 开启内部下拉电阻 (保证松开按键时 PA0 是稳定的低电平 0V)
+    GPIO_InitStruct.Pull = GPIO_PULLDOWN;          
+    
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-    /*配置 NVIC 中断控制器 */
-    // 设置中断优先级为 2 (可以根据需要调整，避开重要系统中断即可)
+    /* 配置 NVIC 中断控制器 */
+    // 设置中断优先级为 2 
     HAL_NVIC_SetPriority(EXTI0_IRQn, 2, 0);
-    //使能 EXTI0 中断通道
+    // 使能 EXTI0 中断通道
     HAL_NVIC_EnableIRQ(EXTI0_IRQn);
 }
 
