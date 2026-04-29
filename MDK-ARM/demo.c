@@ -48,7 +48,6 @@ void Camera_ModeInit(uint8_t mode)
 	ret |= atk_mc2640_set_output_format(ATK_MC2640_OUTPUT_FORMAT_RGB565);
 	/*我发现不设置窗口竟然可以把全图压缩*/
 	ret |= atk_mc2640_set_output_size(DEMO_OUTPUT_WIDTH, DEMO_OUTPUT_HEIGHT);
-
 	atk_mc2640_set_light_mode(mode);//模式设置，可以根据环境选择，白天用OFFICE，夜间用AUTO
 	atk_mc2640_set_color_saturation(ATK_MC2640_COLOR_SATURATION_0);
 	atk_mc2640_set_brightness(ATK_MC2640_BRIGHTNESS_0);
@@ -60,7 +59,7 @@ void Camera_ModeInit(uint8_t mode)
 void demo_run(void)
 {
 	Camera_ModeInit(ATK_MC2640_LIGHT_MODE_OFFICE);
-	uint8_t exposure_level = 80;//白天80夜间100即可
+	uint8_t exposure_level = 5;//白天80夜间100即可
 	uint8_t frame_count = 0;
 	while (1)
 	{
