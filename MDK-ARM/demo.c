@@ -59,7 +59,7 @@ void Camera_ModeInit(uint8_t mode)
 void demo_run(void)
 {
 	Camera_ModeInit(ATK_MC2640_LIGHT_MODE_OFFICE);
-	uint8_t exposure_level = 5;//白天80夜间100即可
+	uint8_t exposure_level = 5;//白天5夜间即可
 	uint8_t frame_count = 0;
 	while (1)
 	{
