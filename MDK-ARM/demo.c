@@ -19,13 +19,9 @@
 #include "malloc.h"
 static uint8_t dump_once = 0;
 extern DCMI_HandleTypeDef hdcmi;
-
-
-
 /* DMA 写入用：AXI SRAM */
 __attribute__((section(".AxSRAM"), aligned(32)))
 uint16_t cam_dma_buf[PIXELS];
-
 /* CPU / AI 使用 */
 uint16_t image_buffer[PIXELS];
 
@@ -40,22 +36,30 @@ static inline void dcache_invalidate(void *addr, uint32_t size)
     __ISB();
 }
 
-/* ================= 主流程 ================= */
-void demo_run(void)
+/*
+*@brief  摄像头模式初始化
+*@param  mode:灯光模式
+*@retval None
+*/
+void Camera_ModeInit(uint8_t mode)
 {
 	uint8_t ret;
 	ret  = atk_mc2640_init();
 	ret |= atk_mc2640_set_output_format(ATK_MC2640_OUTPUT_FORMAT_RGB565);
 	/*我发现不设置窗口竟然可以把全图压缩*/
 	ret |= atk_mc2640_set_output_size(DEMO_OUTPUT_WIDTH, DEMO_OUTPUT_HEIGHT);
-
-	atk_mc2640_set_light_mode(ATK_MC2640_LIGHT_MODE_OFFICE);//白天模式
-	//atk_mc2640_set_light_mode(ATK_MC2640_LIGHT_MODE_AUTO);//夜间模式
+	atk_mc2640_set_light_mode(mode);//模式设置，可以根据环境选择，白天用OFFICE，夜间用AUTO
 	atk_mc2640_set_color_saturation(ATK_MC2640_COLOR_SATURATION_0);
 	atk_mc2640_set_brightness(ATK_MC2640_BRIGHTNESS_0);
 	atk_mc2640_set_contrast(ATK_MC2640_CONTRAST_1);
 	atk_mc2640_set_special_effect(ATK_MC2640_SPECIAL_EFFECT_NORMAL );
-	uint8_t exposure_level = 80;//白天80夜间100即可
+}
+
+/* ================= 主流程 ================= */
+void demo_run(void)
+{
+	Camera_ModeInit(ATK_MC2640_LIGHT_MODE_OFFICE);
+	uint8_t exposure_level = 5;//白天80夜间100即可
 	uint8_t frame_count = 0;
 	while (1)
 	{
